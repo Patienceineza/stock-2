@@ -19,7 +19,7 @@ const router = express.Router();
  *         type:
  *           type: string
  *           enum: ['entry', 'exit']
- *         product:
+ *         productId:
  *           type: string
  *           description: The product ID
  *         quantity:
@@ -48,6 +48,8 @@ const router = express.Router();
  * /api/stock-movements:
  *   get:
  *     summary: Returns the list of all the stock movements
+ *     security:
+ *       - BearerAuth: []
  *     tags: [StockMovements]
  *     responses:
  *       200:
@@ -59,13 +61,15 @@ const router = express.Router();
  *               items:
  *                 $ref: '#/components/schemas/StockMovement'
  */
-router.get('/', stockMovementController.getStockMovements);
+router.get('/', authenticate, authorizeRoles('ADMIN'),stockMovementController.getStockMovements);
 
 /**
  * @swagger
  * /api/stock-movements/{id}:
  *   get:
  *     summary: Get the stock movement by id
+ *     security:
+ *       - BearerAuth: []
  *     tags: [StockMovements]
  *     parameters:
  *       - in: path
@@ -84,13 +88,15 @@ router.get('/', stockMovementController.getStockMovements);
  *       404:
  *         description: The stock movement was not found
  */
-router.get('/:id', stockMovementController.getStockMovementById);
+router.get('/:id',authenticate,stockMovementController.getStockMovementById);
 
 /**
  * @swagger
  * /api/stock-movements:
  *   post:
  *     summary: Create a new stock movement
+ *     security:
+ *       - BearerAuth: []
  *     tags: [StockMovements]
  *     requestBody:
  *       required: true
@@ -108,13 +114,15 @@ router.get('/:id', stockMovementController.getStockMovementById);
  *       500:
  *         description: Some server error
  */
-router.post('/', stockMovementController.createStockMovement);
+router.post('/',authenticate, authorizeRoles('ADMIN'), stockMovementController.createStockMovement);
 
 /**
  * @swagger
  * /api/stock-movements/{id}:
  *   put:
  *     summary: Update the stock movement by the id
+ *     security:
+ *       - BearerAuth: []
  *     tags: [StockMovements]
  *     parameters:
  *       - in: path
@@ -141,13 +149,15 @@ router.post('/', stockMovementController.createStockMovement);
  *       500:
  *         description: Some error happened
  */
-router.put('/:id', stockMovementController.updateStockMovement);
+router.put('/:id',authenticate, authorizeRoles('ADMIN'), stockMovementController.updateStockMovement);
 
 /**
  * @swagger
  * /api/stock-movements/{id}:
  *   delete:
  *     summary: Remove the stock movement by id
+ *     security:
+ *       - BearerAuth: []
  *     tags: [StockMovements]
  *     parameters:
  *       - in: path
@@ -162,6 +172,6 @@ router.put('/:id', stockMovementController.updateStockMovement);
  *       404:
  *         description: The stock movement was not found
  */
-router.delete('/:id', stockMovementController.deleteStockMovement);
+router.delete('/:id',authenticate, authorizeRoles('ADMIN'), stockMovementController.deleteStockMovement);
 
 module.exports = router;

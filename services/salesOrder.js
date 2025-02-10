@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const SalesOrder = require('../models/salesOrder');
 const Product = require('../models/Product');
-const Inventory = require('../models/Inventory');
-const InventoryUnit = require('../models/inventoryUnit');
+const InventoryUnit = require('../models/');
 
 const createSalesOrder = async (orderData) => {
   const session = await mongoose.startSession();

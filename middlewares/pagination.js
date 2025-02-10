@@ -19,6 +19,7 @@ const pagination = (model) => {
     try {
       const list = await model.find(filter)
         .skip((page - 1) * limit)
+        .select('-password')
         .limit(parseInt(limit));
 
       const total = await model.countDocuments(filter);

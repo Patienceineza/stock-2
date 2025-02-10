@@ -6,84 +6,78 @@ const router = express.Router();
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     Product:
- *       type: object
- *       required:
- *         - name
- *         - price
- *         - isUnique
- *         - condition
- *       properties:
- *         name:
- *           type: string
- *         description:
- *           type: string
- *         image:
- *           type: string
- *         category:
- *           type: string
- *           description: The category ID
- *         price:
- *           type: number
- *         isUnique:
- *           type: boolean
- *         barcode:
- *           type: string
- *         quantity:
- *           type: number
- *           default: 0
- *         condition:
- *           type: string
- *           enum: ['New', 'Like New', 'Good', 'Fair']
- *         status:
- *           type: string
- *           enum: ['available', 'sold_out']
- *           default: 'available'
- *       example:
- *         name: "Product Name"
- *         description: "Product Description"
- *         image: "http://example.com/image.jpg"
- *         category: "60d0fe4f5311236168a109ca"
- *         price: 100
- *         isUnique: true
- *         barcode: "1234567890123"
- *         quantity: 1
- *         condition: "New"
- *         status: "available"
- */
-
-/**
- * @swagger
  * tags:
  *   name: Products
- *   description: The products managing API
+ *   description: API for managing products
  */
 
 /**
  * @swagger
  * /api/products:
  *   get:
- *     summary: Returns the list of all the products
+ *     summary: Retrieve a list of products with pagination, search, and filters
+ *     security:
+ *       - BearerAuth: []
  *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: size
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of products per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by product name, description, or barcode
+ *       - in: query
+ *         name: categoryId
+ *         schema:
+ *           type: string
+ *         description: Filter products by category ID
  *     responses:
  *       200:
- *         description: The list of the products
+ *         description: A list of products with pagination
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Product'
+ *               type: object
+ *               properties:
+ *                 list:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 total:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 pageSize:
+ *                   type: integer
+ *                 nextPage:
+ *                   type: integer
+ *                   nullable: true
+ *                 prevPage:
+ *                   type: integer
+ *                   nullable: true
  */
-router.get('/', productController.getProducts);
+router.get('/', authenticate, productController.getProducts);
 
 /**
  * @swagger
  * /api/products/{id}:
  *   get:
- *     summary: Get the product by id
+ *     summary: Get a product by ID
+ *     security:
+ *       - BearerAuth: []
  *     tags: [Products]
  *     parameters:
  *       - in: path
@@ -91,24 +85,26 @@ router.get('/', productController.getProducts);
  *         schema:
  *           type: string
  *         required: true
- *         description: The product id
+ *         description: The product ID
  *     responses:
  *       200:
- *         description: The product description by id
- *         contents:
+ *         description: Product details retrieved successfully
+ *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Product'
  *       404:
- *         description: The product was not found
+ *         description: Product not found
  */
-router.get('/:id', productController.getProductById);
+router.get('/:id', authenticate, productController.getProductById);
 
 /**
  * @swagger
  * /api/products:
  *   post:
  *     summary: Create a new product
+ *     security:
+ *       - BearerAuth: []
  *     tags: [Products]
  *     requestBody:
  *       required: true
@@ -118,21 +114,23 @@ router.get('/:id', productController.getProductById);
  *             $ref: '#/components/schemas/Product'
  *     responses:
  *       201:
- *         description: The product was successfully created
+ *         description: Product created successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Product'
  *       500:
- *         description: Some server error
+ *         description: Server error
  */
-router.post('/', productController.createProduct);
+router.post('/', authenticate, authorizeRoles('ADMIN'), productController.createProduct);
 
 /**
  * @swagger
  * /api/products/{id}:
  *   put:
- *     summary: Update the product by the id
+ *     summary: Update a product by ID
+ *     security:
+ *       - BearerAuth: []
  *     tags: [Products]
  *     parameters:
  *       - in: path
@@ -140,32 +138,43 @@ router.post('/', productController.createProduct);
  *         schema:
  *           type: string
  *         required: true
- *         description: The product id
+ *         description: The product ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Product'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               categoryId:
+ *                 type: string
  *     responses:
  *       200:
- *         description: The product was updated
+ *         description: Product updated successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Product'
  *       404:
- *         description: The product was not found
+ *         description: Product not found
  *       500:
- *         description: Some error happened
+ *         description: Server error
  */
-router.put('/:id', authenticate, authorizeRoles('admin'), productController.updateProduct);
+router.put('/:id', authenticate, authorizeRoles('ADMIN'), productController.updateProduct);
 
 /**
  * @swagger
  * /api/products/{id}:
  *   delete:
- *     summary: Remove the product by id
+ *     summary: Delete a product by ID
+ *     security:
+ *       - BearerAuth: []
  *     tags: [Products]
  *     parameters:
  *       - in: path
@@ -173,13 +182,23 @@ router.put('/:id', authenticate, authorizeRoles('admin'), productController.upda
  *         schema:
  *           type: string
  *         required: true
- *         description: The product id
+ *         description: The product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Reason for deletion
  *     responses:
  *       200:
- *         description: The product was deleted
+ *         description: Product deleted successfully
  *       404:
- *         description: The product was not found
+ *         description: Product not found
  */
-router.delete('/:id', authenticate, authorizeRoles('admin'), productController.deleteProduct);
+router.delete('/:id', authenticate, authorizeRoles('ADMIN'), productController.deleteProduct);
 
 module.exports = router;

@@ -1,5 +1,6 @@
-const productService = require('../services/product');
+const Product = require('../models/Product');
 const Joi = require('joi');
+const { v4: uuidv4 } = require('uuid');
 
 const productSchema = Joi.object({
   name: Joi.string().required().messages({
@@ -24,27 +25,79 @@ const productSchema = Joi.object({
     otherwise: Joi.number().min(0).messages({
       'number.min': 'Quantity cannot be less than 0.',
     }),
-  }).default(0),
+  }).default((parent) => (parent.isUnique ? 1 : 0)),
   condition: Joi.string().valid('New', 'Like New', 'Good', 'Fair').required().messages({
     'any.required': 'Condition is required.',
     'any.only': 'Condition must be one of: New, Like New, Good, Fair.',
   }),
+  size: Joi.when('isUnique', {
+    is: false,
+    then: Joi.string().optional(),
+    otherwise: Joi.forbidden().messages({
+      'any.unknown': 'Size is only available for non-unique products.',
+    }),
+  }),
+  color: Joi.when('isUnique', {
+    is: false,
+    then: Joi.string().optional(),
+    otherwise: Joi.forbidden().messages({
+      'any.unknown': 'Color is only available for non-unique products.',
+    }),
+  }),
   status: Joi.string().valid('available', 'sold_out').default('available'),
+  barcode: Joi.string().optional(),
 });
-
 
 exports.getProducts = async (req, res) => {
   try {
-    const result = await productService.getProducts(req.query);
-    res.status(200).json(result);
+    const { page = 1, size = 10, search, categoryId } = req.query;
+    const filters = {};
+
+    // Search by name, description, or barcode
+    if (search) {
+      filters.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { barcode: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Filter by categoryId if provided
+    if (categoryId) {
+      filters.category = categoryId;
+    }
+
+    const total = await Product.countDocuments(filters);
+    const totalPages = Math.ceil(total / size);
+    const currentPage = parseInt(page, 10);
+    const pageSize = parseInt(size, 10);
+    const hasNextPage = currentPage < totalPages;
+    const hasPrevPage = currentPage > 1;
+
+    const products = await Product.find(filters)
+      .skip((currentPage - 1) * pageSize)
+      .limit(pageSize)
+      .populate("category")
+      .lean();
+
+    res.status(200).json({
+      list: products,
+      total,
+      totalPages,
+      currentPage,
+      pageSize,
+      nextPage: hasNextPage ? currentPage + 1 : null,
+      prevPage: hasPrevPage ? currentPage - 1 : null,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+
 exports.getProductById = async (req, res) => {
   try {
-    const product = await productService.getProductById(req.params.id);
+    const product = await Product.findById(req.params.id).populate('category').lean();
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
     res.json(product);
@@ -58,7 +111,13 @@ exports.createProduct = async (req, res) => {
     const { error, value } = productSchema.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
-    const product = await productService.createProduct(value);
+    if (value.isUnique) {
+      value.quantity = 1;
+      value.barcode = uuidv4();
+    }
+
+    const product = new Product(value);
+    await product.save();
     res.status(201).json(product);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -70,7 +129,11 @@ exports.updateProduct = async (req, res) => {
     const { error, value } = productSchema.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
-    const product = await productService.updateProduct(req.params.id, value);
+    if (value.isUnique) {
+      value.quantity = 1;
+    }
+
+    const product = await Product.findByIdAndUpdate(req.params.id, value, { new: true }).populate('category');
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
     res.json(product);
@@ -78,14 +141,24 @@ exports.updateProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await productService.deleteProduct(req.params.id);
-    if (!product) return res.status(404).json({ error: 'Product not found' });
+    const product = await Product.findById(req.params.id);
 
-    res.json({ message: 'Product deleted successfully' });
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    // Toggle the product's isActive status
+    product.isActive = !product.isActive;
+
+    // Save the updated product
+    await product.save();
+
+    res.json({
+      message: `Product successfully ${product.isActive ? "activated" : "deactivated"}`,
+      product,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+

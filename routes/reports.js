@@ -1,8 +1,13 @@
 const express = require('express');
-const reportsController = require('../controllers/reports');
-const {authenticate} = require('../middlewares/auth');
-
 const router = express.Router();
+const reportController = require('../controllers/reports');
+const { authenticate, authorizeRoles } = require('../middlewares/auth');
+/**
+ * @swagger
+ * tags:
+ *   name: Reports
+ *   description: API endpoints for generating sales, inventory, and product reports
+ */
 
 /**
  * @swagger
@@ -11,65 +16,37 @@ const router = express.Router();
  *     summary: Get inventory report
  *     security:
  *       - BearerAuth: []
+ *     description: Fetch inventory details including stock levels and value.
  *     tags: [Reports]
  *     responses:
  *       200:
- *         description: Inventory report
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   product:
- *                     type: string
- *                     format: ObjectId
- *                   quantity:
- *                     type: number
- *                   status:
- *                     type: string
- *                     enum: ['low', 'none', 'abundant']
- *       500:
- *         description: Failed to fetch inventory report
- */
-router.get('/inventory', authenticate, reportsController.getInventoryReport);
-
-/**
- * @swagger
- * /api/reports/inventory/{productId}:
- *   get:
- *     summary: Get inventory report by product ID
- *     security:
- *       - BearerAuth: []
- *     tags: [Reports]
- *     parameters:
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: string
- *         description: Product ID
- *     responses:
- *       200:
- *         description: Inventory report by product ID
+ *         description: Inventory report retrieved successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 product:
- *                   type: string
- *                   format: ObjectId
- *                 quantity:
+ *                 totalStockValue:
  *                   type: number
- *                 status:
- *                   type: string
- *                   enum: ['low', 'none', 'abundant']
+ *                 lowStockItems:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       productId:
+ *                         type: string
+ *                       productName:
+ *                         type: string
+ *                       quantity:
+ *                         type: number
+ *                       status:
+ *                         type: string
+ *                 inventorySummary:
+ *                   type: array
  *       500:
- *         description: Failed to fetch inventory report
+ *         description: Server error
  */
-router.get('/inventory/:productId', authenticate, reportsController.getInventoryReportByProductId);
+router.get('/inventory',authenticate,  reportController.getInventoryReport);
 
 /**
  * @swagger
@@ -78,10 +55,19 @@ router.get('/inventory/:productId', authenticate, reportsController.getInventory
  *     summary: Get sales report
  *     security:
  *       - BearerAuth: []
+ *     description: Retrieve sales data based on period (daily, weekly, monthly).
  *     tags: [Reports]
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [daily, weekly, monthly]
+ *         required: true
+ *         description: Sales period filter
  *     responses:
  *       200:
- *         description: Sales report
+ *         description: Sales report retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -91,55 +77,45 @@ router.get('/inventory/:productId', authenticate, reportsController.getInventory
  *                   type: number
  *                 totalProfit:
  *                   type: number
- *                 topSellingProducts:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       productId:
- *                         type: string
- *                         format: ObjectId
- *                       quantity:
- *                         type: number
- *                       totalSales:
- *                         type: number
+ *                 period:
+ *                   type: string
+ *                 totalOrders:
+ *                   type: integer
  *       500:
- *         description: Failed to fetch sales report
+ *         description: Server error
  */
-router.get('/sales', authenticate, reportsController.getSalesReport);
+router.get('/sales', authenticate,reportController.getSalesReport);
 
 /**
  * @swagger
- * /api/reports/sales/{productId}:
+ * /api/reports/best-selling:
  *   get:
- *     summary: Get sales report by product ID
+ *     summary: Get best-selling products
  *     security:
  *       - BearerAuth: []
+ *     description: Retrieve the top 5 best-selling products.
  *     tags: [Reports]
- *     parameters:
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: string
- *         description: Product ID
  *     responses:
  *       200:
- *         description: Sales report by product ID
+ *         description: Best-selling products retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 totalSales:
- *                   type: number
- *                 totalProfit:
- *                   type: number
- *                 quantitySold:
- *                   type: number
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   productId:
+ *                     type: string
+ *                   productName:
+ *                     type: string
+ *                   quantitySold:
+ *                     type: number
+ *                   totalSales:
+ *                     type: number
  *       500:
- *         description: Failed to fetch sales report
+ *         description: Server error
  */
-router.get('/sales/:productId', authenticate, reportsController.getSalesReportByProductId);
+router.get('/best-selling', authenticate,reportController.getBestSellingProducts);
 
 module.exports = router;

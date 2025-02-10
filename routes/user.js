@@ -149,5 +149,99 @@ router.get('/', authenticate, authorizeRoles('ADMIN'), pagination(User), userCon
 router.put('/:id', authenticate, authorizeRoles('ADMIN', 'MANAGER', 'SALES_PERSON'), userController.updateUser);
 
 
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Deactivate a user (Admin, Manager, or Owner)
+ *     description: Deactivates a user by setting their `is_active` field to `false`. The user is not removed from the system.
+ *     security:
+ *       - BearerAuth: []
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user to deactivate.
+ *     responses:
+ *       200:
+ *         description: User deactivated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User deactivated
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid request data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ *       403:
+ *         description: Forbidden (user does not have the required role)
+ */
+router.delete('/:id',authenticate, authorizeRoles('ADMIN', 'MANAGER', 'SALES_PERSON'),userController.deleteUser);
+
+/**
+ * @swagger
+ * /api/users/activate/{id}:
+ *   put:
+ *     summary: Activate a user (Admin, Manager)
+ *     description: Activates a user by setting their `is_active` field to `true`.
+ *     security:
+ *       - BearerAuth: []
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user to activate.
+ *     responses:
+ *       200:
+ *         description: User activated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User activated successfully
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid request data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ *       403:
+ *         description: Forbidden (user does not have the required role)
+ */
+router.put('/activate/:id',authenticate, authorizeRoles('ADMIN', 'MANAGER'),userController.activateUser);
+
+
+
 
 module.exports = router;

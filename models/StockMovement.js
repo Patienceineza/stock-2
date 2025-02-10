@@ -22,7 +22,7 @@ const stockMovementSchema = new mongoose.Schema(
       enum: ['sold', 'returned', 'damaged', 'other'],
       required: function () { return this.type === 'exit'; },
     },
-    notes: { type: String }, // Optional field for extra info
+    notes: { type: String }, 
   },
   { timestamps: true }
 );

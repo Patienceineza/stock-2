@@ -1,6 +1,6 @@
 const express = require('express');
-const SalesOrderController = require('../controllers/salesOrder');
-const {authenticate} = require('../middlewares/auth');
+const SalesOrderController = require('../controllers/salesOrder'); 
+const { authenticate } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -12,50 +12,55 @@ const router = express.Router();
  *       type: object
  *       required:
  *         - customer
- *         - items
+ *         - products
  *         - totalAmount
  *       properties:
  *         customer:
- *           type: object
- *           properties:
- *             name:
- *               type: string
- *             email:
- *               type: string
- *             phone:
- *               type: string
- *             address:
- *               type: string
- *         items:
+ *           type: string
+ *           description: Customer name
+ *         products:
  *           type: array
+ *           description: List of products in the order
  *           items:
  *             type: object
  *             properties:
  *               product:
  *                 type: string
  *                 format: ObjectId
+ *                 description: Product ID reference
  *               quantity:
  *                 type: number
+ *                 description: Number of units ordered
+ *                 minimum: 1
  *               price:
  *                 type: number
- *               sku:
- *                 type: string
+ *                 description: Price per unit of the product
  *         totalAmount:
  *           type: number
+ *           description: Total amount for the order
  *         discount:
  *           type: number
+ *           description: Discount applied to the order
+ *           default: 0
  *         tax:
  *           type: number
- *         paymentStatus:
+ *           description: Tax applied to the order
+ *           default: 0
+ *         status:
  *           type: string
- *           enum: ['pending', 'received']
- *         orderStatus:
- *           type: string
- *           enum: ['pending', 'completed', 'cancelled']
+ *           enum: ['pending', 'completed', 'canceled']
+ *           description: Order status
+ *           default: 'pending'
  *         createdAt:
  *           type: string
  *           format: date-time
+ *           description: Order creation timestamp
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: Last update timestamp
  */
+
 
 /**
  * @swagger
@@ -79,34 +84,6 @@ const router = express.Router();
  */
 router.get('/', authenticate, SalesOrderController.getSalesOrders);
 
-/**
- * @swagger
- * /api/salesOrders/{id}:
- *   get:
- *     summary: Get sales order by ID
- *     security:
- *       - BearerAuth: []
- *     tags: [SalesOrders]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Sales order ID
- *     responses:
- *       200:
- *         description: Sales order details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SalesOrder'
- *       404:
- *         description: Sales order not found
- *       500:
- *         description: Failed to fetch sales order
- */
-router.get('/:id', authenticate, SalesOrderController.getSalesOrderById);
 
 /**
  * @swagger
@@ -130,13 +107,13 @@ router.get('/:id', authenticate, SalesOrderController.getSalesOrderById);
  *       500:
  *         description: Failed to create sales order
  */
-router.post('/', authenticate, SalesOrderController.createSalesOrder);
+router.post('/', authenticate, SalesOrderController.createOrder);
 
 /**
  * @swagger
- * /api/salesOrders/{id}/status:
+ * /api/salesOrders/{id}:
  *   put:
- *     summary: Update the status of a sales order
+ *     summary: Update an existing sales order
  *     security:
  *       - BearerAuth: []
  *     tags: [SalesOrders]
@@ -152,28 +129,22 @@ router.post('/', authenticate, SalesOrderController.createSalesOrder);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               status:
- *                 type: string
- *                 enum: ['pending', 'completed', 'cancelled']
+ *             $ref: '#/components/schemas/SalesOrder'
  *     responses:
  *       200:
- *         description: Sales order status updated successfully
- *       400:
- *         description: Invalid request data
+ *         description: Sales order updated successfully
  *       404:
  *         description: Sales order not found
  *       500:
- *         description: Failed to update sales order status
+ *         description: Failed to update sales order
  */
-router.put('/:id/status', authenticate, SalesOrderController.updateSalesOrderStatus);
+router.put('/:id', authenticate, SalesOrderController.updateOrder);
 
 /**
  * @swagger
- * /api/salesOrders/{id}/cancel:
- *   put:
- *     summary: Cancel a pending sales order
+ * /api/salesOrders/{id}:
+ *   delete:
+ *     summary: Delete a sales order
  *     security:
  *       - BearerAuth: []
  *     tags: [SalesOrders]
@@ -186,14 +157,12 @@ router.put('/:id/status', authenticate, SalesOrderController.updateSalesOrderSta
  *         description: Sales order ID
  *     responses:
  *       200:
- *         description: Sales order cancelled successfully
- *       400:
- *         description: Invalid request data
+ *         description: Sales order deleted successfully
  *       404:
  *         description: Sales order not found
  *       500:
- *         description: Failed to cancel sales order
+ *         description: Failed to delete sales order
  */
-router.put('/:id/cancel', authenticate, SalesOrderController.cancelSalesOrder);
+router.delete('/:id', authenticate, SalesOrderController.deleteOrder);
 
 module.exports = router;

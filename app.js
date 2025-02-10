@@ -8,10 +8,11 @@ const userRoutes = require("./routes/user");
 const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
 const categoryRoutes = require("./routes/categories");
-const inventoryRoutes = require("./routes/inventory");
+const sales = require("./routes/sales");
 const stockMovementRoutes = require("./routes/stockMovement");
 const salesOrderRoutes = require("./routes/salesOrder");
 const barcodeRoutes = require("./routes/barcode");
+const exchangeRateRoutes = require("./routes/exchangeRate");
 
 dotenv.config();
 
@@ -30,15 +31,14 @@ app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
-app.use("/api/inventory", inventoryRoutes);
 app.use("/api/stock-movements", stockMovementRoutes);
 app.use("/api/reports", reportRouter);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/salesOrders", salesOrderRoutes);
-
-app.use("/api/barcode", barcodeRoutes);
+app.use("/api/sales", sales);
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(specs));
+app.use('/api/exchange-rate', exchangeRateRoutes);
 
 const port = process.env.PORT || 8000;
 app.listen(port, () => console.log(`Server listening on port ${port}`));

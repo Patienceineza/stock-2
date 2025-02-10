@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth');
-const { authenticate } = require('../middlewares/auth');
+const  {authenticate}  = require('../middlewares/auth');
 
 /**
  * @swagger
@@ -63,7 +63,7 @@ const { authenticate } = require('../middlewares/auth');
  *       400:
  *         description: Invalid request data
  */
-router.post('/register', authController.register);
+router.post('/register', authController.registerUser);
 
 /**
  * @swagger
@@ -102,7 +102,7 @@ router.post('/register', authController.register);
  *       401:
  *         description: Unauthorized
  */
-router.post('/login', authController.login);
+router.post('/login', authController.loginUser);
 
 
 /**

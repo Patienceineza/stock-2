@@ -1,4 +1,5 @@
 const { get } = require('mongoose');
+
 const User = require('../models/User');
 
 const createUser = async (userData) => {
@@ -11,11 +12,42 @@ const updateUser = async (userId, updatedData) => {
   return await User.findByIdAndUpdate(userId, updatedData, { new: true });
 };
 
-const deleteUser = async (userId) => {
-  return await User.findByIdAndDelete(userId);
-};
 
+// this is to inactivate the user instead of deleting him or her 
+const deleteUser = async (userId) => {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { is_active: false },
+    { new: true } 
+  );
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return user;
+}
+
+// this is to activate the user 
+const activateUser = async (userId) => {
+  
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { is_active: false },
+    { new: true } 
+  );
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return user;
+}
+
+
+
+// This is to retrieve all users  and exclude his password 
 const getAllUsers = async () => {
-    return await User.find();
-  };
+  return await User.find().select('-password'); 
+};
 module.exports = { createUser, updateUser, deleteUser,getAllUsers };
