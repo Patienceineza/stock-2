@@ -4,24 +4,25 @@ const SalesOrder = require('../models/salesOrder');
 
 exports.getInventoryReport = async (req, res) => {
   try {
-    const inventoryItems = await Inventory.find().populate('product');
+    const products = await Product.find();
 
-    const report = inventoryItems.map(item => {
+    const report = products.map(product => {
       let status = 'abundant';
-      if (item.quantity === 0) {
+      if (product.quantity === 0) {
         status = 'none';
-      } else if (item.quantity < 10) {
+      } else if (product.quantity < 10) {
         status = 'low';
       }
 
       return {
-        productId: item.product._id,
-        productName: item.product.name,
-        quantity: item.quantity,
+        productId: product._id,
+        productName: product.name,
+        quantity: product.quantity,
         status,
-        stockValue: item.quantity * item.product.buyingPrice,
+        stockValue: product.quantity * product.price,
       };
     });
+
 
     const totalStockValue = report.reduce((sum, item) => sum + item.stockValue, 0);
 
@@ -32,7 +33,7 @@ exports.getInventoryReport = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch inventory report' });
+    res.status(500).json({ error: "Failed to fetch inventory report" });
   }
 };
 
