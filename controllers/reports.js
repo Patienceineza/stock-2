@@ -1,6 +1,8 @@
 const Inventory = require('../models/inventory');
 const Product = require('../models/Product');
 const SalesOrder = require('../models/salesOrder');
+const Sale = require('../models/sales');
+const moment = require("moment");
 
 exports.getInventoryReport = async (req, res) => {
   try {
@@ -41,13 +43,18 @@ exports.getInventoryReport = async (req, res) => {
 // this is sales report
 exports.getSalesReport = async (req, res) => {
   try {
-    const { period } = req.query; //the period may be weekly ,daily and monthly
+    const { period,startDate, endDate } = req.query; //the period may be weekly ,daily and monthly
     
     let matchCondition = {};
     const now = new Date();
     
     // Set up date ranges
-    if (period === 'daily') {
+    if (startDate && endDate) {
+      matchCondition.createdAt = { 
+        $gte: new Date(startDate), 
+        $lte: new Date(endDate) 
+      };
+    } else if(period === 'daily') {
       matchCondition = { 
         createdAt: { 
           $gte: new Date(now.setHours(0, 0, 0, 0)) 
@@ -77,6 +84,14 @@ exports.getSalesReport = async (req, res) => {
       status: 'completed' 
     }).populate('products.product');
 
+    const orderIds = orders.map(order => order._id);
+
+    // Query corresponding sales records for the orders
+    const sales = await Sale.find({
+      order: { $in: orderIds }
+    });
+
+
     let reportStats = {
       totalSales: 0,
       totalDiscount: 0,
@@ -84,7 +99,8 @@ exports.getSalesReport = async (req, res) => {
       totalQuantity: 0,
       totalProfit: 0,
       totalOrders: orders.length,
-      period: period
+      period: period || `${startDate} to ${endDate}`,
+      paymentMethods:{},
     };
 
     // Calculate totals
@@ -93,6 +109,13 @@ exports.getSalesReport = async (req, res) => {
       reportStats.totalDiscount += order.discount;
       reportStats.totalTax += order.tax;
       
+      const sale = sales.find(sale => sale.order.toString() === order._id.toString());
+      const paymentMethod = sale ? sale.paymentMethod : 'none';
+      
+      if (!reportStats.paymentMethods[paymentMethod]) {
+        reportStats.paymentMethods[paymentMethod] = 0;
+      }
+      reportStats.paymentMethods[paymentMethod] += order.totalAmount;
       // Calculate product-specific metrics
       order.products.forEach(item => {
         if (item.product) {
@@ -149,27 +172,56 @@ exports.getSalesReport = async (req, res) => {
   }
 };
 
-
-
 exports.getBestSellingProducts = async (req, res) => {
   try {
-    const salesOrders = await SalesOrder.find({ 
-      status: 'completed' 
-    }).populate({
-      path: 'products.product',
+    const { filterType, startDate, endDate } = req.query;
+    let start, end;
+
+
+    switch (filterType) {
+      case "weekly":
+        start = moment().startOf("week").toDate();
+        end = moment().endOf("week").toDate();
+        break;
+      case "monthly":
+        start = moment().startOf("month").toDate();
+        end = moment().endOf("month").toDate();
+        break;
+      case "yearly":
+        start = moment().startOf("year").toDate();
+        end = moment().endOf("year").toDate();
+        break;
+      case "custom":
+        start = startDate ? new Date(startDate) : null;
+        end = endDate ? new Date(endDate) : null;
+        break;
+      default:
+        start = moment().startOf("day").toDate();
+        end = moment().endOf("day").toDate();
+    }
+
+    // Build the query with date filtering
+    let query = { status: "completed" };
+    if (start && end) {
+      query.createdAt = { $gte: start, $lte: end };
+    }
+
+    // Fetch sales data
+    const salesOrders = await SalesOrder.find(query).populate({
+      path: "products.product",
       populate: {
-        path: 'category',
-        select: 'name' 
-      }
+        path: "category",
+        select: "name",
+      },
     });
 
     const productSales = {};
 
-    salesOrders.forEach(order => {
-      order.products.forEach(item => {
-        if (item.product) {  
+    salesOrders.forEach((order) => {
+      order.products.forEach((item) => {
+        if (item.product) {
           const productId = item.product._id.toString();
-          
+
           if (!productSales[productId]) {
             productSales[productId] = {
               productId: item.product._id,
@@ -177,26 +229,26 @@ exports.getBestSellingProducts = async (req, res) => {
               quantitySold: 0,
               totalSales: 0,
               averagePrice: 0,
-              categoryName: item.product.category?.name || 'Uncategorized',
+              categoryName: item.product.category?.name || "Uncategorized",
               condition: item.product.condition,
-              colors: item.product.colors || '',
-              sizes: item.product.sizes || '',
-              status: item.product.status
+              colors: item.product.colors || "",
+              sizes: item.product.sizes || "",
+              status: item.product.status,
             };
           }
-          
+
           productSales[productId].quantitySold += item.quantity;
           productSales[productId].totalSales += item.price * item.quantity;
         }
       });
     });
 
-    // Calculate average price and convert to array
+    // Calculate average price and format total sales
     const topSellingProducts = Object.values(productSales)
-      .map(product => ({
+      .map((product) => ({
         ...product,
         averagePrice: +(product.totalSales / product.quantitySold).toFixed(2),
-        totalSales: +product.totalSales.toFixed(2) // This is to  Format to 2 decimal places
+        totalSales: +product.totalSales.toFixed(2),
       }))
       .sort((a, b) => b.quantitySold - a.quantitySold)
       .slice(0, 5);
@@ -204,15 +256,14 @@ exports.getBestSellingProducts = async (req, res) => {
     res.json({
       success: true,
       count: topSellingProducts.length,
-      data: topSellingProducts
+      data: topSellingProducts,
     });
-    
   } catch (error) {
-    console.error('Best selling products error:', error);
-    res.status(500).json({ 
+    console.error("Best selling products error:", error);
+    res.status(500).json({
       success: false,
-      error: 'Failed to fetch best-selling products',
-      message: error.message 
+      error: "Failed to fetch best-selling products",
+      message: error.message,
     });
   }
 };

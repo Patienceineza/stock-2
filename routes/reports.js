@@ -93,29 +93,73 @@ router.get('/sales', authenticate,reportController.getSalesReport);
  *     summary: Get best-selling products
  *     security:
  *       - BearerAuth: []
- *     description: Retrieve the top 5 best-selling products.
+ *     description: Retrieve the top 5 best-selling products based on a selected date range.
  *     tags: [Reports]
+ *     parameters:
+ *       - in: query
+ *         name: filterType
+ *         schema:
+ *           type: string
+ *           enum: [daily, weekly, monthly, yearly, custom]
+ *         required: true
+ *         description: The time range for best-selling products.
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: Required only when filterType is 'custom'. Start date in YYYY-MM-DD format.
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: Required only when filterType is 'custom'. End date in YYYY-MM-DD format.
  *     responses:
  *       200:
  *         description: Best-selling products retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   productId:
- *                     type: string
- *                   productName:
- *                     type: string
- *                   quantitySold:
- *                     type: number
- *                   totalSales:
- *                     type: number
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 count:
+ *                   type: integer
+ *                   example: 5
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       productId:
+ *                         type: string
+ *                         example: "650af78b5e123abc1234abcd"
+ *                       productName:
+ *                         type: string
+ *                         example: "Wireless Headphones"
+ *                       quantitySold:
+ *                         type: number
+ *                         example: 120
+ *                       totalSales:
+ *                         type: number
+ *                         example: 5400.00
+ *                       averagePrice:
+ *                         type: number
+ *                         example: 45.00
+ *                       categoryName:
+ *                         type: string
+ *                         example: "Electronics"
+ *       400:
+ *         description: Invalid input parameters
  *       500:
  *         description: Server error
  */
-router.get('/best-selling', authenticate,reportController.getBestSellingProducts);
+router.get('/best-selling', authenticate, reportController.getBestSellingProducts);
+
 
 module.exports = router;
