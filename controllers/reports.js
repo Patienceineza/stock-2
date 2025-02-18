@@ -1,4 +1,3 @@
-const Inventory = require('../models/inventory');
 const Product = require('../models/Product');
 const SalesOrder = require('../models/salesOrder');
 const Sale = require('../models/sales');
@@ -43,42 +42,35 @@ exports.getInventoryReport = async (req, res) => {
 // this is sales report
 exports.getSalesReport = async (req, res) => {
   try {
-    const { period,startDate, endDate } = req.query; //the period may be weekly ,daily and monthly
-    
+    const { filterType, startDate, endDate } = req.query;
     let matchCondition = {};
     const now = new Date();
-    
+
     // Set up date ranges
-    if (startDate && endDate) {
+    if (filterType === 'custom' && startDate && endDate) {
       matchCondition.createdAt = { 
         $gte: new Date(startDate), 
         $lte: new Date(endDate) 
       };
-    } else if(period === 'daily') {
-      matchCondition = { 
-        createdAt: { 
-          $gte: new Date(now.setHours(0, 0, 0, 0)) 
-        } 
+    } else if (filterType === 'daily') {
+      matchCondition.createdAt = { 
+        $gte: new Date(now.setHours(0, 0, 0, 0)) 
       };
-    } else if (period === 'weekly') {
+    } else if (filterType === 'weekly') {
       const startOfWeek = new Date();
       startOfWeek.setDate(now.getDate() - now.getDay());
       startOfWeek.setHours(0, 0, 0, 0);
-      matchCondition = { 
-        createdAt: { 
-          $gte: startOfWeek 
-        } 
+      matchCondition.createdAt = { 
+        $gte: startOfWeek 
       };
-    } else if (period === 'monthly') {
+    } else if (filterType === 'monthly') {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      matchCondition = { 
-        createdAt: { 
-          $gte: startOfMonth 
-        } 
+      matchCondition.createdAt = { 
+        $gte: startOfMonth 
       };
     }
 
-    // This is Query orders with populated product details
+    // Query orders with populated product details
     const orders = await SalesOrder.find({
       ...matchCondition,
       status: 'completed' 
@@ -91,7 +83,6 @@ exports.getSalesReport = async (req, res) => {
       order: { $in: orderIds }
     });
 
-
     let reportStats = {
       totalSales: 0,
       totalDiscount: 0,
@@ -99,8 +90,8 @@ exports.getSalesReport = async (req, res) => {
       totalQuantity: 0,
       totalProfit: 0,
       totalOrders: orders.length,
-      period: period || `${startDate} to ${endDate}`,
-      paymentMethods:{},
+      period: filterType === 'custom' ? `${startDate} to ${endDate}` : filterType,
+      paymentMethods: {},
     };
 
     // Calculate totals
@@ -108,19 +99,20 @@ exports.getSalesReport = async (req, res) => {
       reportStats.totalSales += order.totalAmount;
       reportStats.totalDiscount += order.discount;
       reportStats.totalTax += order.tax;
-      
+
       const sale = sales.find(sale => sale.order.toString() === order._id.toString());
       const paymentMethod = sale ? sale.paymentMethod : 'none';
-      
+
       if (!reportStats.paymentMethods[paymentMethod]) {
         reportStats.paymentMethods[paymentMethod] = 0;
       }
       reportStats.paymentMethods[paymentMethod] += order.totalAmount;
+
       // Calculate product-specific metrics
       order.products.forEach(item => {
         if (item.product) {
           reportStats.totalQuantity += item.quantity;
-          
+
           // If you have buying price, calculate profit
           if (item.product.buyingPrice) {
             const profitPerUnit = item.price - item.product.buyingPrice;
@@ -172,11 +164,11 @@ exports.getSalesReport = async (req, res) => {
   }
 };
 
+
 exports.getBestSellingProducts = async (req, res) => {
   try {
     const { filterType, startDate, endDate } = req.query;
     let start, end;
-
 
     switch (filterType) {
       case "weekly":
