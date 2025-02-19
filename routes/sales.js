@@ -115,6 +115,8 @@ router.get('/', authenticate, authorizeRoles('CASHIER','MANAGER','ADMIN'), Sales
  *             required:
  *               - orderId
  *               - paymentMethod
+ *               - amountPaid
+ *               - notes
  *             properties:
  *               orderId:
  *                 type: string

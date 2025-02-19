@@ -42,19 +42,26 @@ exports.getSales = async (req, res) => {
 
 exports.confirmPayment = async (req, res) => {
   try {
-    const { orderId, paymentMethod } = req.body;
+    const { orderId, paymentMethod, amountPaid, notes } = req.body;
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
+    const remainingBalance = order.totalAmount - amountPaid;
+    if (amountPaid < remainingBalance) {
+      return res.status(400).json({ error: 'Insufficient payment amount', remainingBalance });
+    }
+
     const sale = await Sale.findOneAndUpdate(
       { order: orderId },
-      { paymentMethod, status: 'paid' },
+      { paymentMethod, status: remainingBalance === 0 ? 'Paid' : "half-paid", notes: paymentMethod === "mobile" ? notes : "", remainingAmount:remainingBalance,amountPaid },
       { new: true }
     );
 
-    await Order.findByIdAndUpdate(orderId, { status: 'completed' });
+    const newStatus = remainingBalance === 0 ? 'completed' : 'pending';
 
-    res.status(200).json(sale);
+    await Order.findByIdAndUpdate(orderId, { status: newStatus, amountPaid: amountPaid });
+
+    res.status(200).json({ sale });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
