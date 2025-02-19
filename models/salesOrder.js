@@ -11,6 +11,8 @@ const orderSchema = new mongoose.Schema(
     ],
     totalAmount: { type: Number, required: true },
     tax: { type: Number, default: 0 },
+    perpareBy :{type: mongoose.Schema.Types.ObjectId, ref: "User", required: true},
+    invoiceNumber: {type: String, required: true},
     discount: { type: Number, default: 0 },
     customer: { type: String, required: true },
     status: { type: String, enum: ['pending', 'completed', 'canceled'], default: 'pending' },

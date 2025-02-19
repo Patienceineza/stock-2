@@ -3,8 +3,10 @@ const Order = require('../models/salesOrder');
 const Product = require('../models/Product');
 const Sale = require('../models/sales');
 const sales = require('../models/sales');
+const generateInvoicesNumber = require('../helper/index')
 exports.createOrder = async (req, res) => {
   try {
+
     let { customer, products, totalAmount, discount, tax } = req.body;
 
     totalAmount = 0; // Reset the initial totalAmount to calculate it dynamically.
@@ -23,8 +25,9 @@ exports.createOrder = async (req, res) => {
       await product.save();
     }
 
+    const invoiceNumber = await generateInvoicesNumber()
     // Create the order
-    const order = await Order.create({ products, totalAmount, discount, customer, tax });
+    const order = await Order.create({ products, totalAmount, discount, customer, tax, preparedBy:req.user.id,invoiceNumber });
 
     // Create a sale record
     const sale = await sales.create({
