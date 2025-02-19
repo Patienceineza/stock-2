@@ -54,16 +54,6 @@ const deleteUser = async (req, res) => {
   }
 };
 
-// this is the controller  to activate the user 
-const activateUser = async (req, res) => {
-  try {
-    const updatedUser = await userService.updateUser(req.params.id);
-    res.status(200).json({ message: 'User activated successfully', user: updatedUser });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
 
 const getAllUsers = async (req, res) => {
     try {
@@ -72,4 +62,18 @@ const getAllUsers = async (req, res) => {
       res.status(400).json({ error: error.message });
     }
   };
-module.exports = { createUser, updateUser, deleteUser,getAllUsers,activateUser };
+
+ const activeUser = async (req,res) =>{
+    try {
+      const user = await userService.disableUser(req.params.id);
+      const message = user.is_active === true ? "User activated successfully" : " User disactivated successfully"
+      res.json({message,user});
+    } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(404).json({ error: 'User not found' });
+      } else {
+        return res.status(500).json({ error: 'Failed to disable User' });
+      }
+    }
+  }
+module.exports = { createUser, updateUser, deleteUser,getAllUsers,activeUser };

@@ -28,21 +28,16 @@ const deleteUser = async (userId) => {
   return user;
 }
 
-// this is to activate the user 
-const activateUser = async (userId) => {
-  
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { is_active: false },
-    { new: true } 
-  );
 
+const disableUser = async (id) => {
+  const user = await User.findById(id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('user not found');
   }
 
-  return user;
-}
+  user.is_active = !user.is_active;
+  return await user.save();
+};
 
 
 
@@ -50,4 +45,4 @@ const activateUser = async (userId) => {
 const getAllUsers = async () => {
   return await User.find().select('-password'); 
 };
-module.exports = { createUser, updateUser, deleteUser,getAllUsers };
+module.exports = { createUser, updateUser, deleteUser,getAllUsers, disableUser };

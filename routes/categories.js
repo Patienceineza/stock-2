@@ -124,4 +124,40 @@ router.put('/:id', authenticate, authorizeRoles('ADMIN'), categoryController.upd
  */
 router.delete('/:id', authenticate, authorizeRoles('ADMIN'), categoryController.deleteCategory);
 
+/**
+ * @swagger
+ * /api/categories/disable-enable/{id}:
+ *   post:
+ *     summary: Enable or disable a category
+ *     description: This endpoint allows an admin to enable or disable a category.
+ *     tags:
+ *       - Categories
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The ID of the category to enable or disable.
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Category status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Category disabled successfully"
+ *       400:
+ *         description: Invalid category ID
+ *       403:
+ *         description: Unauthorized, admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/disable-enable/:id', authenticate, authorizeRoles('ADMIN'), categoryController.disableCategory);
 module.exports = router;

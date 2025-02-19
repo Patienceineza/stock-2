@@ -47,3 +47,17 @@ exports.deleteCategory = async (req, res) => {
     }
   }
 };
+
+exports.disableCategory = async (req,res) =>{
+  try {
+    const category = await categoryService.disableCategory(req.params.id);
+    const message = category.isActive === true ? "category enabled" : " category disabled"
+    res.json({message,category});
+  } catch (error) {
+    if (error.message === 'Category not found') {
+      return res.status(404).json({ error: 'Category not found' });
+    } else {
+      return res.status(500).json({ error: 'Failed to disable category' });
+    }
+  }
+}

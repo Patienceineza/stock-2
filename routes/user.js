@@ -239,7 +239,7 @@ router.delete('/:id',authenticate, authorizeRoles('ADMIN', 'MANAGER', 'SALES_PER
  *       403:
  *         description: Forbidden (user does not have the required role)
  */
-router.put('/activate/:id',authenticate, authorizeRoles('ADMIN', 'MANAGER'),userController.activateUser);
+router.put('/activate/:id',authenticate, authorizeRoles('ADMIN', 'MANAGER'),userController.activeUser);
 
 
 

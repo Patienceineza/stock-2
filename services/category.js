@@ -1,7 +1,7 @@
 const Category = require('../models/Category');
 
 const getCategories = async () => {
-  return await Category.find().populate('parent');
+  return await Category.find({isActive:true}).populate('parent');
 };
 
 const createCategory = async (categoryData) => {
@@ -28,4 +28,14 @@ const deleteCategory = async (id) => {
   return await category.remove();
 };
 
-module.exports = { getCategories, createCategory, updateCategory, deleteCategory };
+const disableCategory = async (id) => {
+  const category = await Category.findById(id);
+  if (!category) {
+    throw new Error('Category not found');
+  }
+
+  category.isActive = !category.isActive;
+  return await category.save();
+};
+
+module.exports = { getCategories, createCategory, updateCategory, deleteCategory, disableCategory };
