@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
-const Inventory = require('../models/inventory');
 const StockMovement = require('../models/StockMovement');
 
 exports.createStockMovement = async (req, res) => {
@@ -180,6 +179,7 @@ exports.getStockMovements = async (req, res) => {
 
     // Get paginated stock movements
     const stockMovements = await StockMovement.find()
+    .sort({ createdAt: -1 }) 
       .populate('product')
       .skip((currentPage - 1) * pageSize)
       .limit(pageSize)

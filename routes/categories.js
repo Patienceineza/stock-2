@@ -160,4 +160,30 @@ router.delete('/:id', authenticate, authorizeRoles('ADMIN'), categoryController.
  *         description: Internal server error
  */
 router.post('/disable-enable/:id', authenticate, authorizeRoles('ADMIN'), categoryController.disableCategory);
+
+/**
+ * @swagger
+ * /api/categories/activate-all:
+ *   post:
+ *     summary: Activate all categories
+ *     description: This endpoint allows an admin to activate all categories.
+ *     tags: [Categories]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All categories activated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "All categories activated successfully"
+ *       500:
+ *         description: Failed to activate all categories
+ */
+router.post('/activate-all', authenticate, authorizeRoles('ADMIN'), categoryController.activateAllCategories);
+
 module.exports = router;

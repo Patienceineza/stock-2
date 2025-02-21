@@ -50,7 +50,7 @@ const productSchema = Joi.object({
 
 exports.getProducts = async (req, res) => {
   try {
-    const { page = 1, size = 10, search, categoryId } = req.query;
+    const { page = 1, pageSize = 10, search, categoryId } = req.query;
     const filters = {};
 
     // Search by name, description, or barcode
@@ -68,15 +68,16 @@ exports.getProducts = async (req, res) => {
     }
 
     const total = await Product.countDocuments(filters);
-    const totalPages = Math.ceil(total / size);
+    const totalPages = Math.ceil(total / pageSize);
     const currentPage = parseInt(page, 10);
-    const pageSize = parseInt(size, 10);
+    const Size = parseInt(pageSize, 10);
     const hasNextPage = currentPage < totalPages;
     const hasPrevPage = currentPage > 1;
 
     const products = await Product.find(filters)
-      .skip((currentPage - 1) * pageSize)
-      .limit(pageSize)
+    .sort({ createdAt: -1 }) 
+      .skip((currentPage - 1) * Size)
+      .limit(Size)
       .populate("category")
       .lean();
 
@@ -85,7 +86,7 @@ exports.getProducts = async (req, res) => {
       total,
       totalPages,
       currentPage,
-      pageSize,
+      pageSize:Size,
       nextPage: hasNextPage ? currentPage + 1 : null,
       prevPage: hasPrevPage ? currentPage - 1 : null,
     });

@@ -8,7 +8,7 @@ const authenticate = async (req, res, next) => {
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
     if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
-
+                                                                  
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await User.findById(decoded.id).select('-password');
 

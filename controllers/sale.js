@@ -14,17 +14,24 @@ exports.getSales = async (req, res) => {
     const hasPrevPage = currentPage > 1;
 
     const sales = await Sale.find()
-      .skip((currentPage - 1) * pageSize)
-      .limit(pageSize)
-      .populate({
-        path: 'order',
-        populate: {
-          path: 'products.product', // Populates the product field inside the order
-          model: 'Product', // Specify the model to populate from
+    .sort({ createdAt: -1 }) 
+    .skip((currentPage - 1) * pageSize)
+    .limit(pageSize)
+    .populate({
+      path: 'order',
+      populate: [
+        {
+          path: 'products.product', 
+          model: 'Product',
         },
-      })
-      .lean();
-
+        {
+          path: 'preparedBy',
+          model: 'User',
+        },
+      ],
+    })
+    .lean();
+  
     res.status(200).json({
       list: sales,
       total,
@@ -43,23 +50,52 @@ exports.getSales = async (req, res) => {
 exports.confirmPayment = async (req, res) => {
   try {
     const { orderId, paymentMethod, amountPaid, notes } = req.body;
+
+    // Ensure amountPaid is a valid number
+    const paymentAmount = parseFloat(amountPaid);
+    if (isNaN(paymentAmount) || paymentAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid payment amount' });
+    }
+
+    // Find the order
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
-    const remainingBalance = order.totalAmount - amountPaid;
-    if (amountPaid < remainingBalance) {
-      return res.status(400).json({ error: 'Insufficient payment amount', remainingBalance });
+    // Find the sale record linked to the order
+    let sale = await Sale.findOne({ order: orderId });
+    if (!sale) return res.status(404).json({ error: "Sale record not found" });
+
+    // Calculate new payment amounts
+    const newAmountPaid = sale.amountPaid + paymentAmount;
+    let newRemainingBalance = sale.totalAmount - newAmountPaid;
+    let overPaid = sale.overPaid || 0; // Initialize overpaid amount if not present
+
+    if (newRemainingBalance < 0) {
+      // Track excess payment
+      overPaid += Math.abs(newRemainingBalance);
+      newRemainingBalance = 0; // Remaining balance should not be negative
     }
 
-    const sale = await Sale.findOneAndUpdate(
+    // Determine new status
+    const newStatus = newRemainingBalance === 0 ? 'paid' : 'half-paid';
+
+    // Update sale record
+    sale = await Sale.findOneAndUpdate(
       { order: orderId },
-      { paymentMethod, status: remainingBalance === 0 ? 'Paid' : "half-paid", notes: paymentMethod === "mobile" ? notes : "", remainingAmount:remainingBalance,amountPaid },
+      { 
+        paymentMethod, 
+        amountPaid: newAmountPaid, 
+        remainingAmount: newRemainingBalance, 
+        overPaid, 
+        status: newStatus, 
+        notes: sale.notes 
+      },
       { new: true }
     );
 
-    const newStatus = remainingBalance === 0 ? 'completed' : 'pending';
-
-    await Order.findByIdAndUpdate(orderId, { status: newStatus, amountPaid: amountPaid });
+    // Update order status
+    const orderStatus = newRemainingBalance === 0 ? 'completed' : 'pending';
+    await Order.findByIdAndUpdate(orderId, { status: orderStatus, amountPaid: newAmountPaid });
 
     res.status(200).json({ sale });
   } catch (error) {
@@ -67,12 +103,30 @@ exports.confirmPayment = async (req, res) => {
   }
 };
 
+
+
 exports.scanBarcode = async (req, res) => {
   try {
     const { barcode } = req.body;
-    const product = await Product.findOne({ barcode });
+    
+    
+    let product = await Product.findOne({ barcode });
 
-    if (!product) return res.status(404).json({ error: 'Product not found' });
+    if (!product) {
+      
+      const similarProducts = await Product.find({
+        $or: [
+          { name: { $regex: barcode, $options: "i" } },
+          { description: { $regex: barcode, $options: "i" } }
+        ]
+      });
+
+      if (similarProducts.length === 0) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      return res.status(200).json({ message: "No exact match found, but here are similar products", similarProducts });
+    }
 
     res.status(200).json(product);
   } catch (error) {

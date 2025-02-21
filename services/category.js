@@ -38,4 +38,20 @@ const disableCategory = async (id) => {
   return await category.save();
 };
 
-module.exports = { getCategories, createCategory, updateCategory, deleteCategory, disableCategory };
+
+const activateAllCategories = async () => {
+  try {
+   
+    const updateResult = await Category.updateMany(
+      { isActive: { $exists: false } }, 
+      { $set: { isActive: true } }      
+    );
+    return updateResult;
+  } catch (error) {
+    console.log(error)
+    throw new Error('Error activating all categories');
+  }
+};
+
+
+module.exports = { getCategories, createCategory, updateCategory, deleteCategory, disableCategory,activateAllCategories };

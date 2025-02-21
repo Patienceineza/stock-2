@@ -56,12 +56,19 @@ const deleteUser = async (req, res) => {
 
 
 const getAllUsers = async (req, res) => {
-    try {
-      res.status(200).json(res.pagination);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  };
+  try {
+    const activeUsers = res.pagination.list.filter(user => user.is_active);
+
+    res.status(200).json({
+      ...res.pagination,
+      list: activeUsers,
+      total: activeUsers.length,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 
  const activeUser = async (req,res) =>{
     try {

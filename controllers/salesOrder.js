@@ -1,40 +1,51 @@
-
-const Order = require('../models/salesOrder');
-const Product = require('../models/Product');
-const Sale = require('../models/sales');
-const sales = require('../models/sales');
-const generateInvoicesNumber = require('../helper/index')
+const Order = require("../models/salesOrder");
+const Product = require("../models/Product");
+const Sale = require("../models/sales");
+const sales = require("../models/sales");
+const { generateInvoicesNumber } = require("../helper");
 exports.createOrder = async (req, res) => {
   try {
+    console.log(req.user_id)
+    let { customer, products, discount, tax } = req.body;
 
-    let { customer, products, totalAmount, discount, tax } = req.body;
+    // Ensure tax and discount are numbers
+    discount = parseFloat(discount) || 0;
+    tax = parseFloat(tax) || 0;
 
-    totalAmount = 0; // Reset the initial totalAmount to calculate it dynamically.
+    let totalAmount = 0; // Initialize total amount
 
     for (const item of products) {
       const product = await Product.findById(item.product);
       if (!product || product.quantity < item.quantity) {
-        return res.status(400).json({ error: `Insufficient stock for ${product?.name || 'a product'}` });
+        return res
+          .status(400)
+          .json({
+            error: `Insufficient stock for ${product?.name || "a product"}`,
+          });
       }
 
-      // Accumulate the total amount dynamically
       totalAmount += item.price * item.quantity;
-      
-      // Deduct the purchased quantity from the product stock
+
       product.quantity -= item.quantity;
       await product.save();
     }
 
-    const invoiceNumber = await generateInvoicesNumber()
-    // Create the order
-    const order = await Order.create({ products, totalAmount, discount, customer, tax, preparedBy:req.user.id,invoiceNumber });
+    totalAmount -= discount;
+    totalAmount = totalAmount < 0 ? 0 : totalAmount;
 
-    // Create a sale record
-    const sale = await sales.create({
+    totalAmount += (tax / 100) * totalAmount;
+    const invoiceNumber = await generateInvoicesNumber()
+   
+    const order = await Order.create({ products, totalAmount, discount, customer, tax, preparedBy:req.user._id,invoiceNumber });
+
+   
+
+    const sale = await Sale.create({
       order: order._id,
       totalAmount: order.totalAmount,
-      paymentMethod: 'none', // Default or pass from request body if needed
-      status: 'pending' // Default status
+      remainingAmount: order.totalAmount,
+      paymentMethod: "none",
+      status: "pending",
     });
 
     res.status(201).json({ order, sale });
@@ -43,16 +54,14 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-
 exports.updateOrder = async (req, res) => {
   try {
     const { products, tax, discount } = req.body;
     let totalAmount = 0;
 
     const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-   
     for (const item of order.products) {
       const product = await Product.findById(item.product);
       if (product) {
@@ -64,7 +73,11 @@ exports.updateOrder = async (req, res) => {
     for (const item of products) {
       const product = await Product.findById(item.product);
       if (!product || product.quantity < item.quantity) {
-        return res.status(400).json({ error: `Insufficient stock for ${product?.name || 'a product'}` });
+        return res
+          .status(400)
+          .json({
+            error: `Insufficient stock for ${product?.name || "a product"}`,
+          });
       }
       totalAmount += item.price * item.quantity;
       product.quantity -= item.quantity;
@@ -94,9 +107,8 @@ exports.updateOrder = async (req, res) => {
 exports.deleteOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-  
     for (const item of order.products) {
       const product = await Product.findById(item.product);
       if (product) {
@@ -110,17 +122,20 @@ exports.deleteOrder = async (req, res) => {
     // Delete the corresponding Sale entry
     await Sale.findOneAndDelete({ order: req.params.id });
 
-    res.status(200).json({ message: 'Order and related sale deleted successfully' });
+    res
+      .status(200)
+      .json({ message: "Order and related sale deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-
 exports.cancelOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('products.product');
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    const order = await Order.findById(req.params.id).populate(
+      "products.product"
+    );
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
     for (const item of order.products) {
       const product = await Product.findById(item.product._id);
@@ -130,7 +145,7 @@ exports.cancelOrder = async (req, res) => {
       }
     }
 
-    order.status = 'canceled';
+    order.status = "canceled";
     await order.save();
 
     res.status(200).json(order);
@@ -141,13 +156,16 @@ exports.cancelOrder = async (req, res) => {
 
 exports.completeOrder = async (req, res) => {
   try {
-    const order = await Order.findByIdAndUpdate(req.params.id, { status: 'completed' }, { new: true });
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status: "completed" },
+      { new: true }
+    );
     res.status(200).json(order);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 exports.getSalesOrders = async (req, res) => {
   try {
@@ -161,9 +179,11 @@ exports.getSalesOrders = async (req, res) => {
     const hasPrevPage = currentPage > 1;
 
     const orders = await Order.find()
+    .sort({ createdAt: -1 }) 
       .skip((currentPage - 1) * pageSize)
       .limit(pageSize)
-      .populate('products.product')
+      .populate("products.product")
+      .populate("preparedBy", "firstName lastName email phone") // Populate preparedBy with selected fields
       .lean();
 
     res.status(200).json({
